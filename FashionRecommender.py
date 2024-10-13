@@ -11,10 +11,13 @@
 import streamlit as st
 import cv2
 import numpy as np
-from langchain.llms import HuggingFaceEndpoint
+import cohere  # Import Cohere SDK
 
-# Set your Hugging Face API key
-sec_key = "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"  # Replace with your actual API key
+# Set your Cohere API key
+cohere_api_key = "NxNcA2AgZ2iOJT64jhQVvXb7dIAspbffhm8QsmxZ"  # Replace with your actual Cohere API key
+
+# Initialize Cohere client
+co = cohere.Client(cohere_api_key)
 
 # Predefined colors with specified names (RGB format)
 colors = [
@@ -77,19 +80,24 @@ def extract_skin_color(image):
     avg_skin_color = cv2.mean(skin, mask=skin_mask)[:3]
     return tuple(map(int, avg_skin_color))
 
-def get_outfit_recommendation(skin_color, occasion,gender,time_of_day):
-    """Get outfit recommendations from the Hugging Face model using LangChain."""
-    repo_id = "openai-community/gpt-3.5-turbo"
-    llm = HuggingFaceEndpoint(repo_id=repo_id, max_length=128, temperature=0.7, token=sec_key)
+def get_outfit_recommendation(skin_color, occasion, gender, time_of_day):
+    """Get outfit recommendations from the Cohere language model."""
+    #co = cohere.Client(cohere_api_key)
 
     # Prepare the prompt for the model
     prompt = (f"Considering the skin color '{skin_color}', the occasion '{occasion}', "
-                     f"the gender '{gender}', and the time of day '{time_of_day}', "
-                     "please provide a detailed outfit suggestion including suitable colors and styles.")
+              f"the gender '{gender}', and the time of day '{time_of_day}', "
+              "please provide a detailed outfit suggestion including suitable colors and styles.")
+
+    # Generate outfit suggestion using Cohere
+    response = co.generate(
+        model='command-xlarge-nightly',
+        prompt=prompt,
+        max_tokens=300,
+        temperature=0.7,
+    )
     
-    # Generate outfit suggestion
-    response = llm(prompt)
-    return response
+    return response.generations[0].text.strip()
 
 # Streamlit UI
 st.title("Outfit Recommendation Based on Skin Color")
@@ -115,6 +123,6 @@ if uploaded_file and occasion:
     st.write(f"Extracted Skin Color (RGB): {avg_skin_color}")
     st.write(f"Closest Predefined Color (RGB): {closest_color[0]}, Name: {closest_color[1]}")
 
-    # Get outfit recommendation using Langchain's OpenAI integration
+    # Get outfit recommendation using Cohere API
     outfit_recommendation = get_outfit_recommendation(closest_color[1], occasion, gender, time_of_day)
     st.write(f"Outfit Recommendation: {outfit_recommendation}")
